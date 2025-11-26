@@ -1,4 +1,5 @@
 from sqlalchemy import Column, String, Text, Enum, DateTime
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -13,3 +14,4 @@ class Topic(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime, nullable=True)
+    trainer_topics = relationship("Trainertopic", back_populates="topic")
