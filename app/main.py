@@ -2,7 +2,9 @@ from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.DB.session import get_db
-from app.Routers.auth import auth_router
+from app.Routers.auth_router import auth_router
+from fastapi.security import OAuth2PasswordBearer
+
 
 import logging
 
@@ -15,4 +17,5 @@ logging.getLogger("sqlalchemy.dialects").setLevel(logging.INFO)
 
 app = FastAPI()
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 app.include_router(auth_router)

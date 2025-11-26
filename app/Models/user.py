@@ -17,7 +17,6 @@ class User(Base):
         pg_ENUM("student", "trainer", "admin", name="user_roles"),
         default="student"
     )
-    # هذه الأعمدة صحيحة وتطابق UserInDB تماماً
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
 

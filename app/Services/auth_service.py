@@ -1,42 +1,36 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import timedelta
 import traceback
 import sys
 
-from app.DB.session import get_db
+from fastapi import HTTPException, status
 from app.Models.user import User
-from app.Schemas.auth import UserCreate, UserLogin, Token, UserInDB
-from app.Services.hash import get_password_hash, verify_password
-from app.Services.jwt import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.Schemas.auth import UserCreate, UserLogin
+from app.core.hash import get_password_hash, verify_password
+from app.core.jwt import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
-def log_db_error(e, detail):
+
+def log_db_error(e: Exception, detail: str):
     print("-------------------------------------------------------")
     print(f"🔥 خطأ قاعدة بيانات حرج تم اكتشافه: {detail}")
     print(f"رسالة الاستثناء: {e}")
     traceback.print_exc(file=sys.stderr)
     sys.stderr.flush()
     print("-------------------------------------------------------")
-
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="An unexpected database error occurred. Check the server console for details."
     )
 
-auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-@auth_router.post("/register", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
-async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
-
+async def register_user_service(user_data: UserCreate, db: AsyncSession):
     try:
-        result = await db.execute(
-            select(User).filter(User.email == user_data.email)
-        )
+        result = await db.execute(select(User).filter(User.email == user_data.email))
         existing_user = result.scalar_one_or_none()
     except Exception as e:
-        log_db_error(e, "Error occurred during user existence check.")
+        log_db_error(e, "Error checking if user exists")
 
     if existing_user:
         raise HTTPException(
@@ -45,14 +39,12 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
         )
 
     hashed_password = get_password_hash(user_data.password)
-
     db_user = User(
         name=user_data.name,
         email=user_data.email,
         password=hashed_password,
         role=user_data.role or "student"
     )
-
     db.add(db_user)
 
     try:
@@ -60,18 +52,17 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
         await db.refresh(db_user)
     except Exception as e:
         await db.rollback()
-        log_db_error(e, "An unexpected database error occurred during registration commit.")
+        log_db_error(e, "Error committing new user to DB")
 
     return db_user
 
-@auth_router.post("/login", response_model=Token)
-async def login_for_access_token(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
 
+async def login_user_service(user_data: UserLogin, db: AsyncSession):
     try:
         result = await db.execute(select(User).filter(User.email == user_data.email))
         user = result.scalar_one_or_none()
     except Exception as e:
-        log_db_error(e, "Error occurred during user login retrieval.")
+        log_db_error(e, "Error retrieving user for login")
 
     if not user or not verify_password(user_data.password, user.password):
         raise HTTPException(
@@ -82,24 +73,23 @@ async def login_for_access_token(user_data: UserLogin, db: AsyncSession = Depend
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "role": user.role},
+        expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@auth_router.get("/get/{user_id}", response_model=UserInDB)
-async def get_user_by_id(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def get_user_by_id_service(user_id: uuid.UUID, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).filter(User.id == user_id))
+        user = result.scalar_one_or_none()
+    except Exception as e:
+        log_db_error(e, f"Error retrieving user with id {user_id}")
 
-    result = await db.execute(
-        select(User).filter(User.id == user_id)
-    )
-    user = result.scalar_one_or_none()
-
-    if user is None:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found"
         )
-
     return user

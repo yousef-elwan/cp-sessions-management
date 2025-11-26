@@ -16,6 +16,10 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+class TokenData(BaseModel):
+    user_id: Optional[UUID] = None
+    role: Optional[str] = None
+
 class UserInDB(BaseModel):
     id: UUID
     name: str
