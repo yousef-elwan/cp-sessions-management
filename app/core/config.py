@@ -35,6 +35,22 @@ class Settings(BaseSettings):
         description="JWT token expiration time in minutes"
     )
     
+    # Super Admin Configuration
+    SUPER_ADMIN_EMAIL: str = Field(
+        default="superadmin@example.com",
+        description="Default Super Admin email"
+    )
+    SUPER_ADMIN_PASSWORD: str = Field(
+        default="SuperAdmin123!",
+        description="Default Super Admin password"
+    )
+    
+    # CORS Configuration
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
+        description="Comma-separated list of allowed CORS origins"
+    )
+    
     # Application Configuration
     DEBUG: bool = Field(
         default=False,

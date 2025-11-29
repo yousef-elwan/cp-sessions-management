@@ -4,11 +4,17 @@ from uuid import UUID
 from app.DB.session import get_db
 from app.Schemas.trainer_topic import TrainerTopicCreate, TrainerTopicResponse
 from app.Services.trainer_topic_service import TrainerTopicService
+from app.Services.auth_dependency import get_current_active_admin
+from app.Models.user import User
 
 trainer_topic_router = APIRouter(prefix="/trainer-topics", tags=["Trainer Topics"])
 
 @trainer_topic_router.post("/", response_model=TrainerTopicResponse)
-async def assign_topic(data: TrainerTopicCreate, db: AsyncSession = Depends(get_db)):
+async def assign_topic(
+    data: TrainerTopicCreate, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_admin)
+):
     result = await TrainerTopicService.assign_topic_to_trainer(
         db, data.trainer_id, data.topic_id
     )

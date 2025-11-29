@@ -28,7 +28,7 @@ class User(Base):
     
     # Role and Status
     role = Column(
-        pg_ENUM("student", "trainer", "admin", name="user_roles"),
+        pg_ENUM("student", "trainer", "admin", "super_admin", name="user_roles"),
         default="student",
         nullable=False
     )

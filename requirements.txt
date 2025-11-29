@@ -4,7 +4,8 @@ sqlalchemy[asyncio]
 asyncpg
 python-dotenv
 pydantic-settings
-alembic
+alembic==1.13.1
+slowapi==0.1.9
 passlib[bcrypt]
 python-jose[cryptography]
 psycopg2-binary

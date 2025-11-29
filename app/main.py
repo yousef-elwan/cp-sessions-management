@@ -3,10 +3,13 @@
 This module initializes the FastAPI application with all configurations and routes.
 """
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Import models to ensure they are registered with SQLAlchemy
 from app.Models import (
@@ -23,6 +26,8 @@ from app.Routers.sessions import sessions_router
 from app.Routers.bookings import bookings_router
 from app.Routers.student_subjects import student_subjects_router
 from app.Routers.notifications import notifications_router
+from app.core.init_db import init_db
+from app.core.config import settings
 
 # Configure logging
 logging.basicConfig(
@@ -43,10 +48,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Configure CORS
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Configure CORS - Read from environment variable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with specific origins in production
+    allow_origins=settings.CORS_ORIGINS.split(","),  # Split comma-separated origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,8 +76,15 @@ app.include_router(student_subjects_router)
 app.include_router(notifications_router)
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Run startup tasks."""
+    await init_db()
+
+
 @app.get("/", tags=["Health"])
-async def root():
+@limiter.limit("100/minute")
+async def root(request: Request):
     """Root endpoint for health check."""
     return {
         "status": "online",

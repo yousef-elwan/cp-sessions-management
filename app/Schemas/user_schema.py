@@ -14,6 +14,7 @@ class UserRole(str, Enum):
     STUDENT = "student"
     TRAINER = "trainer"
     ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
 
 
 class UserBase(BaseModel):
@@ -31,15 +32,15 @@ class UserBase(BaseModel):
         example="ahmed@example.com",
         description="User's email address"
     )
-    role: UserRole = Field(
+    role: Optional[UserRole] = Field( # Role is not required in base, but useful for response
         default=UserRole.STUDENT,
         example=UserRole.STUDENT,
         description="User role: student, trainer, or admin"
     )
 
 
-class UserCreate(UserBase):
-    """Schema for user registration."""
+class UserRegister(UserBase):
+    """Schema for user registration (public)."""
     password: str = Field(
         ...,
         min_length=8,
@@ -59,6 +60,14 @@ class UserCreate(UserBase):
         if not any(char.isalpha() for char in v):
             raise ValueError('Password must contain at least one letter')
         return v
+
+
+class UserCreate(UserRegister):
+    """Schema for user creation (internal/admin)."""
+    role: Optional[UserRole] = Field(
+        default=UserRole.STUDENT,
+        description="User role"
+    )
 
 
 class UserLogin(BaseModel):

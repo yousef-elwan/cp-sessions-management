@@ -7,7 +7,7 @@ from app.Schemas.session_schema import SessionCreate, SessionUpdate, SessionResp
 from app.Schemas.booking_schema import BookingResponse
 from app.Services.session_service import SessionService
 from app.Services.booking_service import BookingService
-from app.Services.auth_dependency import get_current_user
+from app.Services.auth_dependency import get_current_user, get_current_trainer_or_admin
 from app.Models.user import User
 
 sessions_router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -16,11 +16,19 @@ sessions_router = APIRouter(prefix="/sessions", tags=["Sessions"])
 async def create_session(
     session_in: SessionCreate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    if current_user.role != "trainer":
-        raise HTTPException(status_code=403, detail="Only trainers can create sessions")
-    return await SessionService.create_session(db, session_in, current_user.id)
+    trainer_id = current_user.id
+    
+    # If Admin, check if they provided a trainer_id
+    if current_user.role in ["admin", "super_admin"]:
+        if session_in.trainer_id:
+            trainer_id = session_in.trainer_id
+        # If admin doesn't provide trainer_id, they become the trainer (if that's desired behavior)
+        # Or we could enforce it. Let's assume Admin assigns, so if not provided, maybe error?
+        # But for now let's default to current_user if not provided, allowing Admin to be trainer.
+    
+    return await SessionService.create_session(db, session_in, trainer_id)
 
 @sessions_router.get("/", response_model=List[SessionResponse])
 async def get_sessions(
@@ -45,15 +53,15 @@ async def update_session(
     session_id: UUID, 
     session_in: SessionUpdate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    if current_user.role != "trainer":
-        raise HTTPException(status_code=403, detail="Only trainers can update sessions")
+    # Permission check handled by dependency, but we need to check ownership if not admin
     
-    session = await SessionService.get_session_by_id(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.trainer_id != current_user.id:
+        
+    # Allow Admin to update any session, Trainer only their own
+    if current_user.role not in ["admin", "super_admin"] and session.trainer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to update this session")
 
     updated_session = await SessionService.update_session(db, session_id, session_in)
@@ -63,15 +71,15 @@ async def update_session(
 async def delete_session(
     session_id: UUID, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    if current_user.role != "trainer":
-        raise HTTPException(status_code=403, detail="Only trainers can delete sessions")
+    # Permission check handled by dependency
     
-    session = await SessionService.get_session_by_id(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.trainer_id != current_user.id:
+        
+    # Allow Admin to delete any session, Trainer only their own
+    if current_user.role not in ["admin", "super_admin"] and session.trainer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this session")
 
     await SessionService.delete_session(db, session_id)

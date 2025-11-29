@@ -7,7 +7,7 @@ from app.Schemas.student_topic_schema import StudentTopicCreate, StudentTopicRes
 from app.Schemas.booking_schema import BookingResponse
 from app.Services.student_topic_service import StudentTopicService
 from app.Services.booking_service import BookingService
-from app.Services.auth_dependency import get_current_user
+from app.Services.auth_dependency import get_current_user, get_current_trainer_or_admin
 from app.Models.user import User
 
 student_subjects_router = APIRouter(prefix="/students", tags=["Student Subjects"])
@@ -17,10 +17,11 @@ async def add_completed_subject(
     student_id: UUID,
     topic_data: StudentTopicCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    if current_user.role != "admin" and current_user.id != student_id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Only Trainer or Admin can add completed subjects
+    # Dependency handles role check
+    pass # Just to satisfy syntax if I removed the body, but I'm replacing the signature and check
         
     return await StudentTopicService.add_topic_to_student(db, student_id, topic_data.topic_id)
 
@@ -40,10 +41,10 @@ async def remove_completed_subject(
     student_id: UUID,
     topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Only Trainer or Admin can remove
+    pass
 
     success = await StudentTopicService.remove_topic_from_student(db, student_id, topic_id)
     if not success:
