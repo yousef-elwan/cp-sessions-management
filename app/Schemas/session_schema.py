@@ -50,6 +50,21 @@ class SessionBase(BaseModel):
         description="Meeting link (Google Meet, Zoom, etc.)",
         example="https://meet.google.com/abc-defg-hij"
     )
+    
+    @field_validator('start_time', mode='before')
+    @classmethod
+    def normalize_datetime(cls, v):
+        """Remove timezone info to match database TIMESTAMP WITHOUT TIME ZONE."""
+        if isinstance(v, datetime):
+            # If timezone-aware, convert to naive UTC datetime
+            if v.tzinfo is not None:
+                return v.replace(tzinfo=None)
+        elif isinstance(v, str):
+            # Parse ISO format string
+            dt = datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return dt.replace(tzinfo=None)
+        return v
+
 
 
 class SessionCreate(SessionBase):
@@ -99,6 +114,20 @@ class SessionUpdate(BaseModel):
         None,
         description="Session status"
     )
+
+    @field_validator('start_time', mode='before')
+    @classmethod
+    def normalize_datetime(cls, v):
+        """Remove timezone info to match database TIMESTAMP WITHOUT TIME ZONE."""
+        if v is None:
+            return v
+        if isinstance(v, datetime):
+            if v.tzinfo is not None:
+                return v.replace(tzinfo=None)
+        elif isinstance(v, str):
+            dt = datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return dt.replace(tzinfo=None)
+        return v
 
 
 class SessionResponse(SessionBase):

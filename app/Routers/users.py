@@ -17,7 +17,7 @@ async def get_users(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     return await UserService.get_all_users(db, skip, limit)
 
@@ -27,7 +27,7 @@ async def get_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin" and current_user.id != user_id:
+    if current_user.role not in ["admin", "super_admin"] and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized to view this profile")
 
     user = await UserService.get_user_by_id(db, user_id)

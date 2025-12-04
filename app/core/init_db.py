@@ -7,7 +7,8 @@ import asyncio
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.DB.session import AsyncSessionLocal
+from app.DB.session import AsyncSessionLocal, engine
+from app.DB.base import Base
 from app.Models.user import User
 from app.core.config import settings
 from app.core.hash import get_password_hash
@@ -18,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 async def init_db():
     """Initialize database with seed data."""
+    # Ensure all tables and enums exist
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async with AsyncSessionLocal() as db:
         try:
             # 1. Ensure 'super_admin' is in user_roles enum

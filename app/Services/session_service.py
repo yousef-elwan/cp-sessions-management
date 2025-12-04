@@ -5,6 +5,7 @@ This module handles training session management operations.
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.Models.session import TrainingSession
 from app.Schemas.session_schema import SessionCreate, SessionUpdate
 from uuid import UUID
@@ -35,6 +36,18 @@ class SessionService:
         db.add(db_session)
         await db.commit()
         await db.refresh(db_session)
+        
+        # Eagerly load relationships to avoid lazy loading issues
+        result = await db.execute(
+            select(TrainingSession)
+            .options(selectinload(TrainingSession.trainer), selectinload(TrainingSession.topic))
+            .where(
+                TrainingSession.id == db_session.id,
+                TrainingSession.deleted_at.is_(None)
+            )
+        )
+        db_session = result.scalar_one()
+        
         logger.info(f"Created session {db_session.id} for trainer {trainer_id}")
         return db_session
 
@@ -49,7 +62,14 @@ class SessionService:
         Returns:
             Training session if found, None otherwise
         """
-        result = await db.execute(select(TrainingSession).where(TrainingSession.id == session_id))
+        result = await db.execute(
+            select(TrainingSession)
+            .options(selectinload(TrainingSession.trainer), selectinload(TrainingSession.topic))
+            .where(
+                TrainingSession.id == session_id,
+                TrainingSession.deleted_at.is_(None)
+            )
+        )
         return result.scalars().first()
 
     @staticmethod
@@ -64,7 +84,14 @@ class SessionService:
         Returns:
             List of training sessions
         """
-        result = await db.execute(select(TrainingSession).offset(skip).limit(limit))
+        result = await db.execute(
+            select(TrainingSession)
+            .options(selectinload(TrainingSession.trainer), selectinload(TrainingSession.topic))
+            .where(TrainingSession.deleted_at.is_(None))
+            .order_by(TrainingSession.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         return result.scalars().all()
 
     @staticmethod

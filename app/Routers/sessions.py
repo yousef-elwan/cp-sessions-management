@@ -12,6 +12,15 @@ from app.Models.user import User
 
 sessions_router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
+# IMPORTANT: Specific routes MUST come before parameterized routes
+@sessions_router.get("/my-bookings", response_model=List[BookingResponse])
+async def get_my_bookings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get bookings for the current user"""
+    return await BookingService.get_bookings_by_student(db, current_user.id)
+
 @sessions_router.post("/", response_model=SessionResponse)
 async def create_session(
     session_in: SessionCreate, 
@@ -28,7 +37,13 @@ async def create_session(
         # Or we could enforce it. Let's assume Admin assigns, so if not provided, maybe error?
         # But for now let's default to current_user if not provided, allowing Admin to be trainer.
     
-    return await SessionService.create_session(db, session_in, trainer_id)
+    try:
+        return await SessionService.create_session(db, session_in, trainer_id)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @sessions_router.get("/", response_model=List[SessionResponse])
 async def get_sessions(
@@ -55,7 +70,8 @@ async def update_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    # Permission check handled by dependency, but we need to check ownership if not admin
+    # Fetch session first
+    session = await SessionService.get_session_by_id(db, session_id)
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -73,7 +89,8 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_trainer_or_admin)
 ):
-    # Permission check handled by dependency
+    # Fetch session first
+    session = await SessionService.get_session_by_id(db, session_id)
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -116,13 +133,15 @@ async def get_session_bookings(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Allow trainer or admin? Or maybe student too?
-    # Assuming trainer of the session or admin
+    # Allow trainer of the session or admin
     session = await SessionService.get_session_by_id(db, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
         
-    if current_user.role != "admin" and (current_user.role != "trainer" or session.trainer_id != current_user.id):
-         raise HTTPException(status_code=403, detail="Not authorized")
+    # Allow super_admin, admin, or the trainer who owns this session
+    if current_user.role not in ["admin", "super_admin"]:
+        if current_user.role != "trainer" or session.trainer_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
 
     return await BookingService.get_bookings_by_session(db, session_id)
+

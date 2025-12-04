@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from app.Models.booking import Booking
 from app.Models.session import TrainingSession
 from uuid import UUID
@@ -16,8 +17,13 @@ class BookingService:
         # Check prerequisites
         await BookingService.check_prerequisites(db, session_id, student_id)
         
-        # Get session for validation
-        result = await db.execute(select(TrainingSession).where(TrainingSession.id == session_id))
+        # Get session with SELECT FOR UPDATE lock to prevent race conditions
+        # This ensures only one transaction can modify the session at a time
+        result = await db.execute(
+            select(TrainingSession)
+            .where(TrainingSession.id == session_id)
+            .with_for_update()  # Database-level lock
+        )
         session = result.scalars().first()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -30,8 +36,8 @@ class BookingService:
         if session.status not in ["active", "upcoming"]:
             raise HTTPException(status_code=400, detail=f"Cannot book {session.status} session")
         
-        # Check if session is in the past
-        if session.start_time < datetime.now(timezone.utc):
+        # Check if session is in the past (use naive datetime for comparison)
+        if session.start_time < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Cannot book past sessions")
         
         # Check if already booked
@@ -44,28 +50,67 @@ class BookingService:
         if existing.scalars().first():
             raise HTTPException(status_code=400, detail="Already booked this session")
         
+        # Create booking
         db_booking = Booking(
             session_id=session_id,
             student_id=student_id
         )
         db.add(db_booking)
         
-        # Increment current_attendees (session already fetched above)
+        # Increment current_attendees (session already fetched above with lock)
         session.current_attendees += 1
         db.add(session)
+        
+        try:
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            # Handle unique constraint violation (double booking)
+            if "uc_session_student" in str(e) or "duplicate key" in str(e).lower():
+                raise HTTPException(status_code=400, detail="Already booked this session")
+            # Re-raise other exceptions
+            raise
             
-        await db.commit()
         await db.refresh(db_booking)
+        
+        # Eagerly load relationships including nested ones
+        result = await db.execute(
+            select(Booking)
+            .options(
+                selectinload(Booking.student),
+                selectinload(Booking.session).selectinload(TrainingSession.trainer),
+                selectinload(Booking.session).selectinload(TrainingSession.topic)
+            )
+            .where(Booking.id == db_booking.id)
+        )
+        db_booking = result.scalar_one()
+        
         return db_booking
 
     @staticmethod
     async def get_bookings_by_student(db: AsyncSession, student_id: UUID) -> List[Booking]:
-        result = await db.execute(select(Booking).where(Booking.student_id == student_id))
+        result = await db.execute(
+            select(Booking)
+            .options(
+                selectinload(Booking.student),
+                selectinload(Booking.session).selectinload(TrainingSession.trainer),
+                selectinload(Booking.session).selectinload(TrainingSession.topic)
+            )
+            .where(Booking.student_id == student_id)
+        )
         return result.scalars().all()
 
     @staticmethod
     async def get_bookings_by_session(db: AsyncSession, session_id: UUID) -> List[Booking]:
-        result = await db.execute(select(Booking).where(Booking.session_id == session_id))
+        result = await db.execute(
+            select(Booking)
+            .options(
+                selectinload(Booking.student),
+                selectinload(Booking.session).selectinload(TrainingSession.trainer),
+                selectinload(Booking.session).selectinload(TrainingSession.topic)
+            )
+            .where(Booking.session_id == session_id)
+        )
         return result.scalars().all()
 
     @staticmethod

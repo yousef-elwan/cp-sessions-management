@@ -2,10 +2,11 @@
 
 This module defines Pydantic models for topic data validation.
 """
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+import html
 
 
 class TopicBase(BaseModel):
@@ -23,6 +24,13 @@ class TopicBase(BaseModel):
         description="Topic description",
         example="Introduction to Python programming"
     )
+    
+    @field_validator('name', 'description', mode='before')
+    @classmethod
+    def sanitize_html(cls, v: Optional[str]) -> Optional[str]:
+        if v:
+            return html.escape(v)
+        return v
 
 
 class TopicCreate(TopicBase):

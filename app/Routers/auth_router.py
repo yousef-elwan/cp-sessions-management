@@ -34,7 +34,7 @@ auth_router = APIRouter(
     summary="Register new user",
     description="Create a new user account with email and password"
 )
-@limiter.limit("5/minute")
+@limiter.limit("100/minute")
 async def register_user(
     request: Request,
     user_data: UserRegister,
@@ -83,7 +83,7 @@ async def create_admin(
     summary="User login",
     description="Authenticate user and receive JWT access token"
 )
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def login_user(
     request: Request,
     user_data: UserLogin,

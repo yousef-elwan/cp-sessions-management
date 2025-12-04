@@ -11,3 +11,6 @@ python-jose[cryptography]
 psycopg2-binary
 email_validator
 argon2-cffi
+pytest
+pytest-asyncio
+httpx

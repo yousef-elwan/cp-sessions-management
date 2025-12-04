@@ -21,6 +21,7 @@ from app.Models import (
 from app.Routers.auth_router import auth_router
 from app.Routers.topic import topic_router
 from app.Routers.trainer_topic import trainer_topic_router
+from app.Routers.topic_prerequisites import router as topic_prerequisites_router
 from app.Routers.users import users_router
 from app.Routers.sessions import sessions_router
 from app.Routers.bookings import bookings_router
@@ -69,6 +70,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 app.include_router(auth_router)
 app.include_router(topic_router)
 app.include_router(trainer_topic_router)
+app.include_router(topic_prerequisites_router)
 app.include_router(users_router)
 app.include_router(sessions_router)
 app.include_router(bookings_router)

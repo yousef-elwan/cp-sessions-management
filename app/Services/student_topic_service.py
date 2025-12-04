@@ -5,6 +5,7 @@ This module handles student completed topics management.
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from app.Models.student_topic import Studenttopic
 from uuid import UUID
 from typing import List
@@ -33,7 +34,18 @@ class StudentTopicService:
         )
         db.add(db_student_topic)
         await db.commit()
-        await db.refresh(db_student_topic)
+        
+        # Eagerly load the topic relationship to avoid MissingGreenlet error
+        result = await db.execute(
+            select(Studenttopic)
+            .options(joinedload(Studenttopic.topic))
+            .where(
+                Studenttopic.student_id == student_id,
+                Studenttopic.topic_id == topic_id
+            )
+        )
+        db_student_topic = result.scalars().first()
+        
         logger.info(f"Student {student_id} completed topic {topic_id}")
         return db_student_topic
 
@@ -48,7 +60,11 @@ class StudentTopicService:
         Returns:
             List of completed topics
         """
-        result = await db.execute(select(Studenttopic).where(Studenttopic.student_id == student_id))
+        result = await db.execute(
+            select(Studenttopic)
+            .options(joinedload(Studenttopic.topic))
+            .where(Studenttopic.student_id == student_id)
+        )
         return result.scalars().all()
 
     @staticmethod
