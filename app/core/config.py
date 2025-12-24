@@ -5,12 +5,13 @@ This module defines application settings using Pydantic Settings.
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 
-
+#basesettings bring the values from .env
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
     
     All settings are loaded from the .env file in the project root.
     """
+    
     
     # Database Configuration
     DATABASE_URL: str = Field(
@@ -73,6 +74,7 @@ class Settings(BaseSettings):
             raise ValueError('SECRET_KEY must be at least 32 characters long')
         return v
 
+    #This piece of code is configuring how Pydantic BaseSettings should load and handle environment variables
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
