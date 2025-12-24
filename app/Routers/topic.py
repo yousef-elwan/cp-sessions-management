@@ -19,6 +19,12 @@ async def create_topic(
     current_user: User = Depends(get_current_active_admin)
 ):
     topic = Topic(**data.dict())
+    result = await db.execute(
+        select(Topic).where(Topic.name == topic.name)
+    )
+    if result.scalars().first():
+        raise HTTPException(status_code=400, detail="topic is alrady exist")
+    
     db.add(topic)
     await db.commit()
     await db.refresh(topic)

@@ -1,15 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import func
 from app.Models.booking import Booking
 from app.Models.session import TrainingSession
 from uuid import UUID
 from typing import List, Optional
 from fastapi import HTTPException, status
 from app.Models.student_topic import Studenttopic
+from datetime import timedelta
+
 from app.Models.topic import Topic
 from app.Models.prerequisite import TopicPrerequisite
 from datetime import datetime, timezone
+from sqlalchemy import and_, or_, text
 
 class BookingService:
     @staticmethod
@@ -40,16 +44,37 @@ class BookingService:
         if session.start_time < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Cannot book past sessions")
         
-        # Check if already booked
-        existing = await db.execute(
-            select(Booking).where(
-                Booking.session_id == session_id,
-                Booking.student_id == student_id
+        # Check that there are no inclusive_sessions .
+
+        session_end = session.start_time + timedelta(minutes=session.duration_minutes)
+        inclusive_sessions = await db.execute(
+            select(Booking)
+            .join(Booking.session)
+            .where(
+                or_(
+                    # session starts inside existing session
+                    and_(
+                        TrainingSession.start_time >= session.start_time,
+                        TrainingSession.start_time < session_end,
+                    ),
+                    # existing session starts inside new session
+                    and_(
+                        TrainingSession.start_time
+                        + (TrainingSession.duration_minutes * text("interval '1 minute'"))
+                        > session.start_time,
+                        TrainingSession.start_time <= session.start_time,
+                    ),
+                )
             )
         )
-        if existing.scalars().first():
-            raise HTTPException(status_code=400, detail="Already booked this session")
-        
+
+        if inclusive_sessions.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="Already booked a session on the same time"
+            )
+
+
         # Create booking
         db_booking = Booking(
             session_id=session_id,
