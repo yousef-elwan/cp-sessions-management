@@ -12,6 +12,11 @@ from app.Models.student_topic import Studenttopic
 from app.Models.topic import Topic
 from app.Models.trainer_topic import Trainertopic
 from app.Models.user import User
+from app.Models.role import AppRole
+from app.Models.permission import Permission
+from app.Models.user_role import UserRole
+from app.Models.role_permission import RolePermission
+
 from alembic import context
 
 import sys

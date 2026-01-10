@@ -27,6 +27,10 @@ from app.Routers.sessions import sessions_router
 from app.Routers.bookings import bookings_router
 from app.Routers.student_subjects import student_subjects_router
 from app.Routers.notifications import notifications_router
+from app.Routers.roles import role_router
+from app.Routers.permission import permission_router
+from app.Routers.role_permission import Role_Permission_router
+from app.Routers.user_roles import user_roles_router
 from app.core.init_db import init_db
 from app.core.config import settings
 
@@ -76,12 +80,18 @@ app.include_router(sessions_router)
 app.include_router(bookings_router)
 app.include_router(student_subjects_router)
 app.include_router(notifications_router)
+app.include_router(role_router)
+app.include_router(permission_router)
+app.include_router(Role_Permission_router)
+app.include_router(user_roles_router)
 
 
+#here there is a bug when i use init_db()
+#i will commit it untill i fix the whole project
 @app.on_event("startup")
 async def startup_event():
     """Run startup tasks."""
-    await init_db()
+  #  await init_db()
 
 
 @app.get("/", tags=["Health"])

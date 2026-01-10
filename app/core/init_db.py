@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.DB.session import AsyncSessionLocal, engine
 from app.DB.base import Base
 from app.Models.user import User
+
 from app.core.config import settings
 from app.core.hash import get_password_hash
 

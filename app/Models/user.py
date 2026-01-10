@@ -45,6 +45,9 @@ class User(Base):
     bookings = relationship("Booking", back_populates="student", cascade="all, delete-orphan")
     student_topics = relationship("Studenttopic", back_populates="student", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    roles = relationship("UserRole",backref="user",cascade="all, delete-orphan")
+
+
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
