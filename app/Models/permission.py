@@ -15,8 +15,4 @@ class Permission(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    role_permissions = relationship(
-        "RolePermission",
-        back_populates="permission",
-        cascade="all, delete-orphan"
-    )
+    role_permissions = relationship("RolePermission", back_populates="permission",cascade="all, delete-orphan")

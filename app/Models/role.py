@@ -15,15 +15,10 @@ class AppRole(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    role_permissions = relationship(
-        "RolePermission",
-        back_populates="role",
-        cascade="all, delete-orphan"
-    )
-
+    role_permissions = relationship("RolePermission",back_populates="role",cascade="all, delete-orphan")
     users = relationship(
         "UserRole",
-        backref="role",
+        back_populates="role",
         cascade="all, delete-orphan"
     )
 

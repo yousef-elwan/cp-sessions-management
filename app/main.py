@@ -91,7 +91,7 @@ app.include_router(user_roles_router)
 @app.on_event("startup")
 async def startup_event():
     """Run startup tasks."""
-  #  await init_db()
+    await init_db()
 
 
 @app.get("/", tags=["Health"])

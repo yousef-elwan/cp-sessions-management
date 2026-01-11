@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.DB.session import get_db
+from uuid import UUID
 from app.Schemas.user_role import UserRoleCreate, UserRoleResponse
 from app.Services.user_role_service import (
     assign_role_to_user,
@@ -23,8 +24,8 @@ async def assign_role(
 
 @user_roles_router.delete("/")
 async def remove_role(
-    user_id,
-    role_id,
+    user_id:UUID,
+    role_id:UUID,
     db: AsyncSession = Depends(get_db)
 ):
     try:
