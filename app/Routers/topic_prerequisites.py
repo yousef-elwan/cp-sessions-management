@@ -11,7 +11,7 @@ from typing import List
 from app.DB.session import get_db
 from app.Models.prerequisite import TopicPrerequisite
 from app.Models.topic import Topic
-from app.Services.auth_dependency import get_current_active_admin
+from app.Services.auth_dependency import get_current_user
 from app.Models.user import User
 
 
@@ -24,7 +24,7 @@ from app.Schemas.topic_prerequisite_schema import TopicPrerequisiteCreate
 async def add_prerequisite(
     prerequisite_data: TopicPrerequisiteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Add a prerequisite relationship between topics.
@@ -78,7 +78,7 @@ async def remove_prerequisite(
     topic_id: UUID,
     prerequisite_topic_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """Remove a prerequisite relationship."""
     result = await db.execute(

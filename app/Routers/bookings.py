@@ -4,7 +4,7 @@ from uuid import UUID
 from app.DB.session import get_db
 from app.Schemas.booking_schema import BookingCreate, BookingResponse, BookingFeedback, BookingAttendance
 from app.Services.booking_service import BookingService
-from app.Services.auth_dependency import get_current_user, get_current_trainer_or_admin
+from app.Services.auth_dependency import get_current_user
 from app.Models.user import User
 
 bookings_router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -28,7 +28,7 @@ async def mark_attendance(
     booking_id: UUID,
     attendance_data: BookingAttendance,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_trainer_or_admin)
+    current_user: User = Depends(get_current_user)
 ):
     """Mark student attendance (Trainer/Admin only)."""
     booking = await BookingService.mark_attendance(db, booking_id, attendance_data.attended)

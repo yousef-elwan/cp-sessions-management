@@ -7,8 +7,13 @@ from jose import jwt
 from typing import Optional
 from app.core.config import settings
 
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    *,
+    user_id: str,
+    roles: list[str],
+    permissions: list[str],
+    expires_delta: Optional[timedelta] = None
+) -> str:
     """Create a JWT access token.
     
     Args:
@@ -23,13 +28,26 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         >>> print(token)
         eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     """
-    to_encode = data.copy()
+    now = datetime.now(timezone.utc)
 
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = (
+        now + expires_delta
+        if expires_delta
+        else now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
 
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    payload: Dict[str, Any] = {
+        "sub": user_id,          # standard JWT subject
+        "user_id": user_id,      # explicit for clarity
+        "roles": roles,          # list of role names
+        "permissions": permissions,  # flattened permissions
+        "iat": now,              # issued at
+        "exp": expire
+    }
+
+    encoded_jwt = jwt.encode(
+        payload,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
     return encoded_jwt

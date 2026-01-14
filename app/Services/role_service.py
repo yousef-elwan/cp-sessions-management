@@ -55,7 +55,25 @@ async def get_role_by_id(
         )
     return role
 
+async def get_role_id_by_name(
+    db: AsyncSession,
+    role_name: str
+) -> UUID:
+    result = await db.execute(
+        select(AppRole.id).where(
+            AppRole.name == role_name,
+            AppRole.is_active == True
+        )
+    )
+    role_id = result.scalar_one_or_none()
 
+    if not role_id:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Role '{role_name}' not found"
+        )
+
+    return role_id
 
 async def update_role(
     db: AsyncSession,
@@ -70,7 +88,6 @@ async def update_role(
     await db.commit()
     await db.refresh(role)
     return role
-
 
 
 async def delete_role(

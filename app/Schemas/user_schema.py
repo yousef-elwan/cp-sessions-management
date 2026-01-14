@@ -32,11 +32,6 @@ class UserBase(BaseModel):
         example="ahmed@example.com",
         description="User's email address"
     )
-    role: Optional[UserRole] = Field( # Role is not required in base, but useful for response
-        default=UserRole.STUDENT,
-        example=UserRole.STUDENT,
-        description="User role: student, trainer, or admin"
-    )
 
 
 class UserRegister(UserBase):

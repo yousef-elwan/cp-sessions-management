@@ -7,7 +7,7 @@ from app.Schemas.session_schema import SessionCreate, SessionUpdate, SessionResp
 from app.Schemas.booking_schema import BookingResponse
 from app.Services.session_service import SessionService
 from app.Services.booking_service import BookingService
-from app.Services.auth_dependency import get_current_user, get_current_trainer_or_admin
+from app.Services.auth_dependency import get_current_user
 from app.Models.user import User
 
 sessions_router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -25,7 +25,7 @@ async def get_my_bookings(
 async def create_session(
     session_in: SessionCreate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_trainer_or_admin)
+    current_user: User = Depends(get_current_user)
 ):
     trainer_id = current_user.id
     
@@ -68,7 +68,7 @@ async def update_session(
     session_id: UUID, 
     session_in: SessionUpdate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_trainer_or_admin)
+    current_user: User = Depends(get_current_user)
 ):
     # Fetch session first
     session = await SessionService.get_session_by_id(db, session_id)
@@ -87,7 +87,7 @@ async def update_session(
 async def delete_session(
     session_id: UUID, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_trainer_or_admin)
+    current_user: User = Depends(get_current_user)
 ):
     # Fetch session first
     session = await SessionService.get_session_by_id(db, session_id)

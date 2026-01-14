@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.DB.session import get_db
 from app.Models.role import AppRole
+from app.Services.role_service import get_role_id_by_name
 from app.Schemas.role import (
     RoleCreate,
     RoleUpdate,
@@ -40,6 +41,21 @@ async def get_role(
     db: AsyncSession = Depends(get_db),
 ):
     return await role_service.get_role_by_id(db, role_id)
+
+@role_router.get("/id/{role_name}", response_model=UUID)
+async def get_role_id(role_name: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get the UUID of a role by its name.
+    
+    Args:
+        role_name: Name of the role
+        db: Database session
+    
+    Returns:
+        UUID of the role
+    """
+    role_id = await get_role_id_by_name(db, role_name)
+    return role_id
 
 @role_router.patch("/{role_id}", response_model=RoleResponse)
 async def update_role(

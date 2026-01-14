@@ -7,7 +7,7 @@ from app.DB.session import get_db
 from app.Models.topic import Topic
 from app.Models.user import User
 from app.Schemas.topic import TopicCreate, TopicUpdate, TopicResponse
-from app.Services.auth_dependency import get_current_active_admin
+from app.Services.auth_dependency import get_current_user
 
 
 topic_router = APIRouter(prefix="/topics", tags=["Topics"])
@@ -16,7 +16,7 @@ topic_router = APIRouter(prefix="/topics", tags=["Topics"])
 async def create_topic(
     data: TopicCreate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     topic = Topic(**data.dict())
     result = await db.execute(
@@ -52,7 +52,7 @@ async def update_topic(
     topic_id: UUID, 
     data: TopicUpdate, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Topic).where(Topic.id == topic_id, Topic.deleted_at == None))
     topic = result.scalar_one_or_none()
@@ -71,7 +71,7 @@ async def update_topic(
 async def delete_topic(
     topic_id: UUID, 
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(select(Topic).where(Topic.id == topic_id, Topic.deleted_at == None))
     topic = result.scalar_one_or_none()
